@@ -29,6 +29,7 @@ public class FireSafetyInspection {
                 .map(InspectionItem::of)
                 .toList();
     }
+
     public static FireSafetyInspection start(UUID homeId) {
         return new FireSafetyInspection(homeId);
     }
@@ -39,6 +40,20 @@ public class FireSafetyInspection {
         ensureInspectionInProgress();
         InspectionItem inspectionItemToUpdate = findItem(inspectionItemId);
         inspectionItemToUpdate.recordResult(result, observation);
+    }
+
+    public void completeInspection() {
+
+        //Inspection must be in progress to complete it
+        ensureInspectionInProgress();
+
+        //All inspection items must have a result to complete the inspection
+        if (!allInspectionItemsHasResult()) {
+            throw new InvalidInspectionStateException("Cannot complete inspection: Not all inspection items have a result.");
+        }
+
+        this.status = InspectionStatus.COMPLETED;
+        this.completedAt = Instant.now();
     }
 
     public UUID getId() {
@@ -77,5 +92,11 @@ public class FireSafetyInspection {
                 .filter(item -> item.getId().equals(inspectionItemId))
                 .findFirst()
                 .orElseThrow(() -> new InspectionItemNotFoundException(inspectionItemId));
+    }
+
+    private boolean allInspectionItemsHasResult() {
+
+        return inspectionItems.stream()
+                .allMatch(InspectionItem::hasResult);
     }
 }
