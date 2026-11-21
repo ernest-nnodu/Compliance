@@ -1,5 +1,7 @@
 package com.jackalcode.Compliance.inspection.domain;
 
+import com.jackalcode.Compliance.inspection.exception.InvalidInspectionStateException;
+
 import java.util.Objects;
 import java.util.UUID;
 
@@ -24,7 +26,7 @@ public class InspectionItem {
 
         //if the result is FAIL, observation is required
         if (resultToRecord == CheckResult.FAIL && (observation == null || observation.isBlank())) {
-            throw new IllegalArgumentException("Observation is required when the result is FAIL");
+            throw new InvalidInspectionStateException("Observation is required when check result is FAIL");
         }
 
         this.result = resultToRecord;
