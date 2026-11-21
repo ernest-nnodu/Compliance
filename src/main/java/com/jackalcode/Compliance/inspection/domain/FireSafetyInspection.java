@@ -1,5 +1,8 @@
 package com.jackalcode.Compliance.inspection.domain;
 
+import com.jackalcode.Compliance.inspection.exception.InspectionItemNotFoundException;
+import com.jackalcode.Compliance.inspection.exception.InvalidInspectionStateException;
+
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -30,6 +33,14 @@ public class FireSafetyInspection {
         return new FireSafetyInspection(homeId);
     }
 
+    public void recordResult(UUID inspectionItemId, CheckResult result, String observation) {
+
+        //Inspection must be in progress to record a result
+        ensureInspectionInProgress();
+        InspectionItem inspectionItemToUpdate = findItem(inspectionItemId);
+        inspectionItemToUpdate.recordResult(result, observation);
+    }
+
     public UUID getId() {
         return id;
     }
@@ -52,5 +63,19 @@ public class FireSafetyInspection {
 
     public List<InspectionItem> getInspectionItems() {
         return List.copyOf(inspectionItems);
+    }
+
+    private void ensureInspectionInProgress() {
+        if (status != InspectionStatus.IN_PROGRESS) {
+            throw new InvalidInspectionStateException("Cannot record result: Inspection is not in progress.");
+        }
+    }
+
+    private InspectionItem findItem(UUID inspectionItemId) {
+
+        return inspectionItems.stream()
+                .filter(item -> item.getId().equals(inspectionItemId))
+                .findFirst()
+                .orElseThrow(() -> new InspectionItemNotFoundException(inspectionItemId));
     }
 }

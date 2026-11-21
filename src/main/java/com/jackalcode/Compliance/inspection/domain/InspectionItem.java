@@ -19,6 +19,22 @@ public class InspectionItem {
         return new InspectionItem(checkType);
     }
 
+    void recordResult(CheckResult result, String observation) {
+        CheckResult resultToRecord = Objects.requireNonNull(result, "result cannot be null");
+
+        //if the result is FAIL, observation is required
+        if (resultToRecord == CheckResult.FAIL && (observation == null || observation.isBlank())) {
+            throw new IllegalArgumentException("Observation is required when the result is FAIL");
+        }
+
+        this.result = resultToRecord;
+        this.observation = observation;
+    }
+
+    public boolean hasResult() {
+        return result != null;
+    }
+
     public String getObservation() {
         return observation;
     }
