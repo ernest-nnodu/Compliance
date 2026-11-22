@@ -1,5 +1,6 @@
 package com.jackalcode.Compliance.inspection.domain;
 
+import com.jackalcode.Compliance.inspection.exception.IncompleteInspectionException;
 import com.jackalcode.Compliance.inspection.exception.InspectionItemNotFoundException;
 import com.jackalcode.Compliance.inspection.exception.InvalidInspectionStateException;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,10 +40,10 @@ public class FireSafetyInspectionTests {
     void start_whenHomeIdProvided_shouldInitialiseInspectionItems() {
 
         assertAll(
-                () -> assertNotNull(inspection.getInspectionItems(), "Inspection items should not be null"),
-                () -> assertEquals(FireSafetyCheckType.values().length, inspection.getInspectionItems().size(), "Number of inspection items should match the number of FireSafetyCheckType values"),
-                () -> assertTrue(inspection.getInspectionItems().stream().allMatch(item -> item.getCheckType() != null), "All inspection items should have a non-null checkType"),
-                () -> assertTrue(inspection.getInspectionItems().stream().allMatch(item -> item.getResult() == null), "All inspection items should have a null result")
+                () -> assertNotNull(inspection.getCheckItems(), "Inspection items should not be null"),
+                () -> assertEquals(FireSafetyCheckType.values().length, inspection.getCheckItems().size(), "Number of inspection items should match the number of FireSafetyCheckType values"),
+                () -> assertTrue(inspection.getCheckItems().stream().allMatch(item -> item.getCheckType() != null), "All inspection items should have a non-null checkType"),
+                () -> assertTrue(inspection.getCheckItems().stream().allMatch(item -> item.getResult() == null), "All inspection items should have a null result")
         );
     }
 
@@ -57,11 +58,11 @@ public class FireSafetyInspectionTests {
     @DisplayName("Recording a result for an inspection item should update the inspection item")
     void recordResult_whenResultIsValid_shouldUpdateInspectionItem() {
 
-        UUID inspectionItemId = inspection.getInspectionItems().getFirst().getId();
+        UUID inspectionItemId = inspection.getCheckItems().getFirst().getId();
 
         inspection.recordResult(inspectionItemId, CheckResult.PASS, null);
 
-        InspectionItem inspectionItem = inspection.getInspectionItems().stream()
+        InspectionItem inspectionItem = inspection.getCheckItems().stream()
                 .filter(item -> item.getId().equals(inspectionItemId)).findFirst()
                 .orElseThrow();
         assertEquals(CheckResult.PASS, inspectionItem.getResult(),
@@ -72,12 +73,12 @@ public class FireSafetyInspectionTests {
     @DisplayName("Recording a result for an inspection item that already has a result should replace the existing result")
     void recordResult_whenInspectionItemHasResult_shouldReplaceExistingResult() {
 
-        UUID inspectionItemId = inspection.getInspectionItems().getFirst().getId();
+        UUID inspectionItemId = inspection.getCheckItems().getFirst().getId();
 
         inspection.recordResult(inspectionItemId, CheckResult.FAIL, "Existing observation");
         inspection.recordResult(inspectionItemId, CheckResult.PASS, "New observation");
 
-        InspectionItem inspectionItem = inspection.getInspectionItems().stream()
+        InspectionItem inspectionItem = inspection.getCheckItems().stream()
                 .filter(item -> item.getId().equals(inspectionItemId)).findFirst()
                 .orElseThrow();
         assertEquals(CheckResult.PASS, inspectionItem.getResult(),
@@ -100,12 +101,85 @@ public class FireSafetyInspectionTests {
     @DisplayName("Recording a result for an inspection that is already completed should throw an Exception")
     void recordResult_whenInspectionIsCompleted_shouldThrowException() {
 
-        inspection.getInspectionItems()
+        inspection.getCheckItems()
                 .forEach(item -> inspection.recordResult(item.getId(), CheckResult.PASS, "Observation"));
-        inspection.completeInspection();
-        UUID inspectionItemId = inspection.getInspectionItems().getFirst().getId();
+        inspection.complete();
+        UUID inspectionItemId = inspection.getCheckItems().getFirst().getId();
 
         assertThrows(InvalidInspectionStateException.class,
                 () -> inspection.recordResult(inspectionItemId, CheckResult.PASS, "Observation"));
+    }
+
+    @Test
+    @DisplayName("Completing an inspection that has not all check item results recorded should complete")
+    void complete_whenAllCheckItemResultsRecorded_shouldCompleteInspection() {
+
+        inspection.getCheckItems()
+                .forEach(item -> inspection.recordResult(item.getId(), CheckResult.PASS, "Observation"));
+
+        inspection.complete();
+
+        assertEquals(InspectionStatus.COMPLETED, inspection.getStatus(), "Inspection status should be COMPLETED");
+        assertNotNull(inspection.getCompletedAt(), "CompletedAt timestamp should not be null");
+    }
+
+    @Test
+    @DisplayName("Completing an inspection that has not all check item results recorded should throw an Exception")
+    void complete_whenNotAllCheckItemResultsRecorded_shouldThrowException() {
+
+        UUID inspectionItemId = inspection.getCheckItems().getFirst().getId();
+        inspection.recordResult(inspectionItemId, CheckResult.PASS, "Observation");
+
+        assertThrows(IncompleteInspectionException.class,
+                () -> inspection.complete(), "Completing an inspection with incomplete check item results should throw an exception");
+    }
+
+    @Test
+    @DisplayName("Completing an inspection that has check item results with FAIL status should complete")
+    void complete_whenCheckItemHaveFailResult_shouldCompleteInspection() {
+
+        inspection.getCheckItems().forEach(item -> {
+            if (item.getCheckType() == FireSafetyCheckType.FIRE_DOORS) {
+                inspection.recordResult(item.getId(), CheckResult.FAIL, "Fire doors are not compliant");
+            } else {
+                inspection.recordResult(item.getId(), CheckResult.PASS, "Observation");
+            }
+        });
+
+        inspection.complete();
+
+        assertEquals(InspectionStatus.COMPLETED, inspection.getStatus(), "Inspection status should be COMPLETED");
+        assertNotNull(inspection.getCompletedAt(), "CompletedAt timestamp should not be null");
+    }
+
+    @Test
+    @DisplayName("Completing an inspection that has check item results with NOT_APPLICABLE status should complete")
+    void complete_whenCheckItemHaveNotApplicableResult_shouldCompleteInspection() {
+
+        inspection.getCheckItems().forEach(item -> {
+            if (item.getCheckType() == FireSafetyCheckType.FIRE_EXTINGUISHERS) {
+                inspection.recordResult(item.getId(), CheckResult.NOT_APPLICABLE, "Fire extinguishers are not applicable");
+            } else {
+                inspection.recordResult(item.getId(), CheckResult.PASS, "Observation");
+            }
+        });
+
+        inspection.complete();
+
+        assertEquals(InspectionStatus.COMPLETED, inspection.getStatus(), "Inspection status should be COMPLETED");
+        assertNotNull(inspection.getCompletedAt(), "CompletedAt timestamp should not be null");
+    }
+
+    @Test
+    @DisplayName("Completing an inspection that is already completed should throw an exception")
+    void complete_whenInspectionIsAlreadyCompleted_shouldThrowException() {
+
+        //Complete the inspection
+        inspection.getCheckItems()
+                .forEach(item -> inspection.recordResult(item.getId(), CheckResult.PASS, "Observation"));
+        inspection.complete();
+
+        //Attempt to complete the inspection again
+        assertThrows(InvalidInspectionStateException.class, () -> inspection.complete());
     }
 }

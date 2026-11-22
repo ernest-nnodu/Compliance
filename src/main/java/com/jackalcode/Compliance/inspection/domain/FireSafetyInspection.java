@@ -1,5 +1,6 @@
 package com.jackalcode.Compliance.inspection.domain;
 
+import com.jackalcode.Compliance.inspection.exception.IncompleteInspectionException;
 import com.jackalcode.Compliance.inspection.exception.InspectionItemNotFoundException;
 import com.jackalcode.Compliance.inspection.exception.InvalidInspectionStateException;
 
@@ -16,7 +17,7 @@ public class FireSafetyInspection {
     private InspectionStatus status;
     private Instant startedAt;
     private Instant completedAt;
-    private List<InspectionItem> inspectionItems;
+    private List<InspectionItem> checkItems;
 
     private FireSafetyInspection(UUID homeId) {
         this.id = UUID.randomUUID();
@@ -25,7 +26,7 @@ public class FireSafetyInspection {
         this.startedAt = Instant.now();
 
         //Initialise inspection items
-        this.inspectionItems = Arrays.stream(FireSafetyCheckType.values())
+        this.checkItems = Arrays.stream(FireSafetyCheckType.values())
                 .map(InspectionItem::of)
                 .toList();
     }
@@ -37,19 +38,19 @@ public class FireSafetyInspection {
     public void recordResult(UUID inspectionItemId, CheckResult result, String observation) {
 
         //Inspection must be in progress to record a result
-        ensureInspectionInProgress();
-        InspectionItem inspectionItemToUpdate = findItem(inspectionItemId);
+        ensureInProgress();
+        InspectionItem inspectionItemToUpdate = findCheckItem(inspectionItemId);
         inspectionItemToUpdate.recordResult(result, observation);
     }
 
-    public void completeInspection() {
+    public void complete() {
 
         //Inspection must be in progress to complete it
-        ensureInspectionInProgress();
+        ensureInProgress();
 
         //All inspection items must have a result to complete the inspection
-        if (!allInspectionItemsHasResult()) {
-            throw new InvalidInspectionStateException("Cannot complete inspection: Not all inspection items have a result.");
+        if (!allCheckItemsHaveResult()) {
+            throw new IncompleteInspectionException("Cannot complete inspection: Not all inspection items have a result.");
         }
 
         this.status = InspectionStatus.COMPLETED;
@@ -76,27 +77,27 @@ public class FireSafetyInspection {
         return completedAt;
     }
 
-    public List<InspectionItem> getInspectionItems() {
-        return List.copyOf(inspectionItems);
+    public List<InspectionItem> getCheckItems() {
+        return List.copyOf(checkItems);
     }
 
-    private void ensureInspectionInProgress() {
+    private void ensureInProgress() {
         if (status != InspectionStatus.IN_PROGRESS) {
             throw new InvalidInspectionStateException("Cannot record result: Inspection is not in progress.");
         }
     }
 
-    private InspectionItem findItem(UUID inspectionItemId) {
+    private InspectionItem findCheckItem(UUID inspectionItemId) {
 
-        return inspectionItems.stream()
+        return checkItems.stream()
                 .filter(item -> item.getId().equals(inspectionItemId))
                 .findFirst()
                 .orElseThrow(() -> new InspectionItemNotFoundException(inspectionItemId));
     }
 
-    private boolean allInspectionItemsHasResult() {
+    private boolean allCheckItemsHaveResult() {
 
-        return inspectionItems.stream()
+        return checkItems.stream()
                 .allMatch(InspectionItem::hasResult);
     }
 }
