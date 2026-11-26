@@ -1,8 +1,8 @@
-package com.jackalcode.Compliance.inspection.domain;
+package com.jackalcode.compliance.inspection.domain;
 
-import com.jackalcode.Compliance.inspection.exception.IncompleteInspectionException;
-import com.jackalcode.Compliance.inspection.exception.InspectionItemNotFoundException;
-import com.jackalcode.Compliance.inspection.exception.InvalidInspectionStateException;
+import com.jackalcode.compliance.inspection.exception.IncompleteInspectionException;
+import com.jackalcode.compliance.inspection.exception.InspectionItemNotFoundException;
+import com.jackalcode.compliance.inspection.exception.InvalidInspectionStateException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

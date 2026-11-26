@@ -1,4 +1,4 @@
-package com.jackalcode.Compliance.inspection.domain;
+package com.jackalcode.compliance.inspection.domain;
 
 public enum FireSafetyCheckType {
     FIRE_EXITS,

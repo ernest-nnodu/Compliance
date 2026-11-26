@@ -1,4 +1,4 @@
-package com.jackalcode.Compliance.inspection.exception;
+package com.jackalcode.compliance.inspection.exception;
 
 import java.util.UUID;
 
