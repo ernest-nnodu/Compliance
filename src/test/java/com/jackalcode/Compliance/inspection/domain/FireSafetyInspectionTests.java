@@ -182,4 +182,20 @@ public class FireSafetyInspectionTests {
         //Attempt to complete the inspection again
         assertThrows(InvalidInspectionStateException.class, () -> inspection.complete());
     }
+
+    @Test
+    @DisplayName("Getting the check items should prevent external removal of items")
+    void getCheckItems_shouldPreventExternalRemoval() {
+        assertThrows(UnsupportedOperationException.class, () -> inspection.getCheckItems().removeFirst());
+        assertEquals(FireSafetyCheckType.values().length, inspection.getCheckItems().size(),
+                "The number of check items should remain unchanged after attempting to remove an item externally");
+    }
+
+    @Test
+    @DisplayName("Getting the check items should prevent external addition of items")
+    void getCheckItems_shouldPreventExternalAddition() {
+        assertThrows(UnsupportedOperationException.class, () -> inspection.getCheckItems().add(InspectionItem.of(FireSafetyCheckType.FIRE_DOORS)));
+        assertEquals(FireSafetyCheckType.values().length, inspection.getCheckItems().size(),
+                "The number of check items should remain unchanged after attempting to add an item externally");
+    }
 }
