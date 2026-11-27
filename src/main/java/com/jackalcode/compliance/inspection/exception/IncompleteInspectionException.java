@@ -1,4 +1,4 @@
-package com.jackalcode.Compliance.inspection.exception;
+package com.jackalcode.compliance.inspection.exception;
 
 public class IncompleteInspectionException extends RuntimeException {
 
